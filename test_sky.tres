@@ -1,0 +1,4 @@
+[gd_resource type="ProceduralSky" format=2]
+
+[resource]
+sky_energy = 0.0
