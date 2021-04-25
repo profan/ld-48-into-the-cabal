@@ -1,12 +1,18 @@
 extends KinematicBody
 
-var GRAVITY = -22.5 # 9.8 what? who the fuck
+onready var camera = get_node("camera")
+onready var original_camera_translation = camera.translation
+
+var GRAVITY = -9.8 # 9.8 what? who the fuck
 var FRICTION = 0.9
+var AIR_FRICTION = 0.9
+
+var JUMP_FORCE = 32.0
 
 var SENSITIVITY = 1.0
 var DEGREES_PER_SECOND = 22.5
-var MOVEMENT_ACCEL = 4.0 # units per second?
-var MAX_SPEED = 32.0 # units per second?
+var MOVEMENT_ACCEL = 1.25 # units per second?
+var MAX_SPEED = 48.0 # units per second?
 var ACCEL = 1.0
 
 var velocity: Vector3
@@ -31,6 +37,13 @@ func _input(ev):
 			get_tree().quit()
 	
 
+func get_actual_floor_normal() -> Vector3:
+	var maybe_floor_normal = get_floor_normal()
+	if not maybe_floor_normal:
+		return Vector3.UP
+	else:
+		return maybe_floor_normal
+
 func _physics_process(delta):
 	
 	var mouse_delta: Vector2 = Vector2.ZERO
@@ -44,10 +57,12 @@ func _physics_process(delta):
 	yaw = yaw
 	
 	rotation_degrees.y = yaw
-	rotation_degrees.x = pitch
+	camera.rotation_degrees.x = pitch
 	
+	var camera_delta: Vector3 = Vector3.ZERO
 	var movement_delta: Vector3 = Vector3.ZERO
-	var floor_normal = get_floor_normal()
+	
+	var floor_normal = get_actual_floor_normal()
 	
 	if Input.is_action_pressed("move_forward"):
 		movement_delta += -transform.basis.z
@@ -61,11 +76,22 @@ func _physics_process(delta):
 	if Input.is_action_pressed("move_right"):
 		movement_delta += transform.basis.x
 	
+	if Input.is_action_pressed("move_crouch"):
+		camera_delta.y = -1
+	
+	camera.translation = original_camera_translation + camera_delta
+	
 	# zoop
 	movement_delta.y = 0
 	
-	var gravity_vector = Vector3.UP * -(GRAVITY*GRAVITY) * delta
-	if not is_on_floor() and not is_on_wall(): velocity += gravity_vector
+	if Input.is_action_just_pressed("move_jump") and is_on_floor():
+		#var dir_vector = movement_delta.normalized().linear_interpolate(transform.basis.y, 0.75).normalized()
+		# movement_delta += dir_vector * JUMP_FORCE
+		movement_delta += Vector3.UP * JUMP_FORCE
+	
+	var gravity_vector = floor_normal * -(GRAVITY*GRAVITY) * delta
+	# if not is_on_floor() and not is_on_wall(): velocity += gravity_vector
+	velocity += gravity_vector
 	
 	var movement_vector = movement_delta * MOVEMENT_ACCEL
 	velocity += movement_vector
@@ -74,6 +100,14 @@ func _physics_process(delta):
 		var normed = velocity.normalized()
 		velocity = normed * MAX_SPEED
 	
-	var remainder = move_and_slide(velocity)
-	# velocity -= remainder
-	velocity *= FRICTION
+	var floor_angle = deg2rad(47.5)
+	var remainder = move_and_slide(
+		velocity, Vector3.UP
+	)
+	
+	velocity = remainder
+	
+	if is_on_floor():
+		velocity *= FRICTION
+	else:
+		velocity *= AIR_FRICTION
