@@ -104,8 +104,9 @@ func apply_force_for_interactable():
 	
 	var force_scaled = force_norm * force_adj
 	var force_relative_dot = force_norm.dot(current_obj_velocity)
+	var current_force_magnitude = current_held_object.linear_velocity.length() 
 	
-	if force_relative_dot < 1.0:
+	if force_relative_dot < 1.0 and current_force_magnitude < 8.0:
 	
 		# current_held_object.apply_impulse(object_position, force_norm)
 		current_held_object.apply_central_impulse(force_scaled)

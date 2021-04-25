@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=2]
+[gd_scene load_steps=21 format=2]
 
 [ext_resource path="res://raw/models/library.gltf" type="PackedScene" id=1]
 [ext_resource path="res://player.tscn" type="PackedScene" id=2]
@@ -95,6 +95,8 @@ tracks/5/keys = {
 [sub_resource type="BoxShape" id=4]
 extents = Vector3( 4.9, 2.8, 1 )
 
+[sub_resource type="BoxShape" id=9]
+
 [sub_resource type="Animation" id=5]
 resource_name = "open_the_gate"
 length = 4.0
@@ -131,6 +133,9 @@ tracks/2/keys = {
 
 [sub_resource type="BoxShape" id=6]
 extents = Vector3( 5.2, 8.1, 1 )
+
+[sub_resource type="BoxShape" id=8]
+extents = Vector3( 5, 3.9, 1 )
 
 [node name="menu" type="Spatial"]
 
@@ -289,6 +294,12 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 3.9, -39.5 )
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.04, 0 )
 shape = SubResource( 4 )
 
+[node name="trigger_close" type="Area" parent="the_pathway"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -9, -7.1, -36.1 )
+
+[node name="shape" type="CollisionShape" parent="the_pathway/trigger_close"]
+shape = SubResource( 9 )
+
 [node name="the_entrance" type="Spatial" parent="."]
 script = ExtResource( 10 )
 
@@ -298,11 +309,18 @@ anims/open_the_gate = SubResource( 5 )
 [node name="library_gate" parent="the_entrance" instance=ExtResource( 9 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 4.1, 12.7 )
 
-[node name="trigger" type="Area" parent="the_entrance"]
+[node name="trigger_outside" type="Area" parent="the_entrance"]
 
-[node name="shape" type="CollisionShape" parent="the_entrance/trigger"]
+[node name="shape" type="CollisionShape" parent="the_entrance/trigger_outside"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 4.9, 0, 14.1 )
 shape = SubResource( 6 )
+
+[node name="trigger_inside" type="Area" parent="the_entrance"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 2.8, 9.5 )
+
+[node name="shape" type="CollisionShape" parent="the_entrance/trigger_inside"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 1.2, -5.4 )
+shape = SubResource( 8 )
 
 [editable path="the_pathway/fancy_bookshelf_1"]
 
