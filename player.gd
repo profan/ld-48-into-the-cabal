@@ -4,6 +4,10 @@ const Utils = preload("utils.gd")
 
 onready var camera = get_node("camera")
 onready var original_camera_translation = camera.translation
+onready var glowstick = get_node("camera/ancient_glowstick")
+onready var shape = get_node("shape")
+
+var IS_NOCLIP_MODE = true
 
 var OBJECT_PICKUP_DISTANCE = 4.0
 
@@ -25,6 +29,12 @@ var ACCEL = 1.0
 var velocity: Vector3
 var last_mouse_delta: Vector2
 
+# glowstick bob/etc
+var initial_glowstick_offset: Vector3 = Vector3.ZERO
+var glowstick_offset: Vector3 = Vector3.ZERO
+var glowstick_position_offset: Vector3 = Vector3.ZERO
+var glowstick_velocity: Vector3 = Vector3.ZERO
+
 var current_held_object: RigidBody = null
 
 var pitch = 0
@@ -32,6 +42,11 @@ var yaw = 0
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	Game.connect("on_player_got_torch", self, "_on_player_got_torch")
+	initial_glowstick_offset = glowstick.translation
+
+func _on_player_got_torch():
+	glowstick.visible = true
 
 func _input(ev):
 	
@@ -73,12 +88,21 @@ func try_to_pick_up_item():
 		var distance_to_obj = (result.collider.global_transform.origin - global_transform.origin).length()
 		
 		if Utils.is_object_possible_to_pick_up(collider_obj) and distance_to_obj <= OBJECT_PICKUP_DISTANCE:
-			current_held_object = collider_obj
-			print("picked up: ", current_held_object.name)
+			
+			if collider_obj.is_pickupable == false: return
+			
+			if collider_obj.is_holdable:
+				current_held_object = collider_obj
+				print("now holding: ", current_held_object.name)
+				
+			collider_obj.pick_up_object()
+			
+			print("picked up: ", collider_obj.name)
 			
 
 func try_to_drop_item():
 	print("dropped: ", current_held_object.name)
+	current_held_object.drop_object()
 	current_held_object = null
 
 func ease_in_cubic(v):
@@ -90,7 +114,7 @@ func apply_force_for_interactable():
 	var global_camera_direction = -camera.global_transform.basis.z
 	
 	var carry_distance = 2.0 # tweakable? maybe?
-	var carry_height_offset = Vector3(0.0, 1.0, 0.0)
+	var carry_height_offset = Vector3(0.0, 0.0, 0.0)
 	
 	var object_position = current_held_object.global_transform.origin
 	var desired_position = global_camera_position + global_camera_direction * carry_distance + carry_height_offset
@@ -106,7 +130,8 @@ func apply_force_for_interactable():
 	var force_relative_dot = force_norm.dot(current_obj_velocity)
 	var current_force_magnitude = current_held_object.linear_velocity.length() 
 	
-	if force_relative_dot < 1.0 and current_force_magnitude < 8.0:
+	# if force_relative_dot < 1.0 and current_force_magnitude < 16.0:
+	if current_force_magnitude < 8.0:
 	
 		# current_held_object.apply_impulse(object_position, force_norm)
 		current_held_object.apply_central_impulse(force_scaled)
@@ -116,6 +141,36 @@ func is_currently_holding_object():
 	return current_held_object != null
 
 func _physics_process(delta):
+	
+	if IS_NOCLIP_MODE:
+		if not shape.disabled:
+			shape.disabled = true
+	else:
+		if shape.disabled:
+			shape.disabled = false
+	
+	# Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	
+	var time_since_start = OS.get_ticks_msec()
+	var velocity_magnitude = velocity.length() / 64.0
+	var glowstick_bob_vertical = camera.global_transform.basis.y
+	var glowstick_sway_horizontal = camera.transform.basis.x
+	
+	glowstick_velocity += transform.basis.x * (-last_mouse_delta.x / 4.0) * delta
+	
+	if glowstick_velocity.length() > 2.0:
+		glowstick_velocity = glowstick_velocity.normalized() * 2.0
+	
+	# glowstick_offset = glowstick_bob_vertical * (velocity_magnitude * sin(time_since_start / 150.0))
+	glowstick_offset = glowstick_sway_horizontal * last_mouse_delta.x / 64.0
+	glowstick.translation = initial_glowstick_offset + glowstick_velocity
+	
+	# var rotated_velocity = velocity.rotated(Vector3.UP, rotation.y)
+	# glowstick_position_offset = transform.basis.x * last_mouse_delta.x / 64.0
+	glowstick.set_view_velocity(-(velocity / 4.0) - glowstick_velocity)
+	glowstick.rotation.y = -rotation.y
+	
+	glowstick_velocity *= 0.975
 	
 	var mouse_delta: Vector2 = Vector2.ZERO
 	mouse_delta += last_mouse_delta * DEGREES_PER_SECOND * delta
@@ -128,7 +183,13 @@ func _physics_process(delta):
 	yaw = yaw
 	
 	rotation_degrees.y = yaw
-	camera.rotation_degrees.x = pitch
+	
+	if IS_NOCLIP_MODE:
+		rotation_degrees.x = pitch
+		camera.rotation_degrees.x = 0.0
+	else:
+		camera.rotation_degrees.x = pitch
+		rotation_degrees.x = 0.0
 	
 	var camera_delta: Vector3 = Vector3.ZERO
 	var movement_delta: Vector3 = Vector3.ZERO
@@ -154,20 +215,30 @@ func _physics_process(delta):
 		if current_held_object: try_to_drop_item()
 		else: try_to_pick_up_item()
 	
+	if Input.is_action_just_pressed("move_noclip_toggle"):
+		IS_NOCLIP_MODE = not IS_NOCLIP_MODE
+	
 	if is_currently_holding_object():
 		apply_force_for_interactable()
 	
 	camera.translation = original_camera_translation + camera_delta
 	
 	# zoop
-	movement_delta.y = 0
+	if IS_NOCLIP_MODE:
+		pass
+	else:
+		movement_delta.y = 0
 	
 	if Input.is_action_just_pressed("move_jump") and is_on_floor():
 		#var dir_vector = movement_delta.normalized().linear_interpolate(transform.basis.y, 0.75).normalized()
 		# movement_delta += dir_vector * JUMP_FORCE
 		movement_delta += Vector3.UP * JUMP_FORCE
 	
-	var gravity_vector = floor_normal * -(GRAVITY*GRAVITY) * delta
+	var gravity_vector
+	if IS_NOCLIP_MODE:
+		gravity_vector = Vector3.ZERO
+	else:
+		gravity_vector = floor_normal * -(GRAVITY*GRAVITY) * delta
 	# if not is_on_floor() and not is_on_wall(): velocity += gravity_vector
 	velocity += gravity_vector
 	
