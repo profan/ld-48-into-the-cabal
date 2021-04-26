@@ -8,9 +8,9 @@ func _ready():
 	Game.connect("on_player_activated_passage", self, "_on_player_activated_passage")
 	
 	# DEBUGGEN FOR THE DUNGEON
-	Game.trigger_player_entered_library()
-	Game.trigger_player_activated_passage()
-	Game.trigger_player_entered_passage()
+	# Game.trigger_player_entered_library()
+	# Game.trigger_player_activated_passage()
+	# Game.trigger_player_entered_passage()
 
 func _on_player_activated_passage():
 	if not has_spawned_dungeons:

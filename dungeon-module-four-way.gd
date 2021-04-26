@@ -13,11 +13,15 @@ var has_closed_door_behind_player = false
 func _ready():
 	trigger_close_door.connect("body_entered", self, "_on_body_entered_four_way")
 	Game.connect("on_dungeon_enter_four_way", self, "_on_player_entered_four_way")
+	Game.connect("on_dungeon_reset", self, "_on_dungeon_reset")
 	
 	if is_first_module:
 		forward.is_first_step = true
 		left.is_first_step = true
 		right.is_first_step = true
+
+func _on_dungeon_reset():
+	queue_free()
 
 func _on_player_entered_four_way(which):
 	if which != self and not which.is_first_module:

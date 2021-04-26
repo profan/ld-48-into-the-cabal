@@ -1,5 +1,6 @@
 extends WorldEnvironment
 
+var FOG_FADE_TIME = .25
 var TWEEN_DURATION = 2.0
 var INSIDE_FOG_DEPTH_END = 100.0
 var DARK_ENERGY = 0.25
@@ -11,7 +12,28 @@ func _ready():
 	Game.register_world_environment(self)
 	Game.connect("on_player_activated_gate", self, "_on_player_activated_gate")
 	Game.connect("on_player_entered_passage", self, "_on_player_entered_passage")
+	# Game.connect("on_fade_requested", self, "_on_fade_requested")
 	add_child(tween)
+
+func _on_fade_requested():
+	
+	var initial_fog_end = 0.0
+	
+	tween.interpolate_property(
+		environment, "fog_depth_end",
+		environment.fog_depth_end, 25.0,
+		FOG_FADE_TIME, Tween.TRANS_QUAD,
+		Tween.EASE_OUT
+	)
+	
+	tween.interpolate_property(
+		environment, "fog_depth_end",
+		25.0, initial_fog_end,
+		FOG_FADE_TIME, Tween.TRANS_QUAD,
+		Tween.EASE_OUT
+	)
+	
+	tween.start()
 
 func _change_ambient_energy(v):
 	environment.ambient_light_sky_contribution = v

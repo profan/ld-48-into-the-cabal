@@ -7,7 +7,7 @@ onready var original_camera_translation = camera.translation
 onready var glowstick = get_node("camera/ancient_glowstick")
 onready var shape = get_node("shape")
 
-var IS_NOCLIP_MODE = true
+var IS_NOCLIP_MODE = false
 
 var OBJECT_PICKUP_DISTANCE = 4.0
 
@@ -44,9 +44,14 @@ func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	Game.connect("on_player_got_torch", self, "_on_player_got_torch")
 	initial_glowstick_offset = glowstick.translation
+	Game.request_text_print("librarian, you are here at last")
+	Game.request_text_print("- come, help us restore our sanctuary")
 
 func _on_player_got_torch():
 	glowstick.visible = true
+	Game.request_text_print("librarian, this ancient light may illuminate the way")
+	Game.request_text_print("beware of this maze, as an action repeated will invoke the ancient curse")
+	Game.request_text_print("however, once you have come full circle you may find the final guardian")
 
 func _input(ev):
 	
